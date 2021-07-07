@@ -6,28 +6,31 @@ function ver()
 	printf "%03d%03d%03d" $(echo "$1" | tr '.' ' ')
 }
 
-mount | grep '^/' | grep -q ${1}
 
-if [ $? -ne 1 ]; then
-    echo "Looks like partitions on device /dev/${1} are mounted"
-    echo "Not going to work on a device that is currently in use"
-    mount | grep '^/' | grep ${1}
-    exit 1
-fi
 
-echo -e "\nWorking on $DEV\n"
-
-SIZE=`fdisk -l $DEV | grep "$DEV" | cut -d' ' -f5 | grep -o -E '[0-9]+'`
-
-echo DISK SIZE – $SIZE bytes
-
-if [ "$SIZE" -lt 1800000000 ]; then
-	echo "Require an SD card of at least 2GB"
-	exit 1
-fi
-
-function setPartition()
+function partitionSdCard()
 {
+    DEV=/dev/$1
+    mount | grep '^/' | grep -q ${1}
+
+    if [ $? -ne 1 ]; then
+        echo "Looks like partitions on device /dev/${1} are mounted"
+        echo "Not going to work on a device that is currently in use"
+        echo "$(basename $0) -d or $(basename $0) -h"
+        # mount | grep '^/' | grep ${1}
+        exit 1
+    fi
+
+    echo -e "\nWorking on $DEV\n"
+
+    SIZE=`fdisk -l $DEV | grep "$DEV" | cut -d' ' -f5 | grep -o -E '[0-9]+'`
+
+    echo DISK SIZE – $SIZE bytes
+
+    if [ "$SIZE" -lt 1800000000 ]; then
+        echo "Require an SD card of at least 2GB"
+        exit 1
+    fi
 	# new versions of sfdisk don't use rotating disk params
 	sfdisk_ver=`sfdisk --version | awk '{ print $4 }'`
 
@@ -70,15 +73,15 @@ case "$argu1" in
 		exit 1
 		;;
 	"-p") echo "partition sd card"
-		setPartition
+		partitionSdCard $2
 		exit 1
 		;;
 	"-h")
-                echo "Usage: $(basename $0) [-y] [-z]"
-                echo "  -d         Delete all memory sd card"
-                echo "  -p         partition sd card"
-                exit 1
-                ;;
+        echo "Usage: $(basename $0) [-y] [-z]"
+        echo "  -d         Delete all memory sd card"
+        echo "  -p         partition sd card"
+        exit 1
+        ;;
 	"-s")   echo "Set sd card"
 		;;
 	*)	echo "Wrong argument. Please use help command :"
