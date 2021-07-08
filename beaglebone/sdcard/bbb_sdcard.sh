@@ -13,23 +13,40 @@ fi
 # function 
 deleteFunc()
 {
-	echo -n "Name device sdcard [ex: sda/sdb/sdc] > "
-	read nameSdCard
+	echo "=== Delete Partition sd card ===\n"
+	if [ "$1" = "" ]
+	then
+		echo -n "Name device sdcard [ex: sda/sdb/sdc] > "
+		read nameSdCard
+		DEV=/dev/$nameSdCard
+	else
+		DEV=/dev/$1
+	fi
+
+	
 	echo -n " Do you want delete sd card [y][n] :"
 	read res
 	if [ $res = "y" ]
 	then 
-		sd1="${nameSdCard}1"
+		sd1="${DEV}1"
 		sudo umount $sd1
-		sd2="${nameSdCard}2"
+		sd2="${DEV}2"
 		sudo umount $sd2
-cat << EOF | sudo fdisk $nameSdCard
-	d
-	1
-	d
-	2
-	w
-EOF
+		# cat << EOF | sudo fdisk $nameSdCard
+		# 	d
+		# 	1
+		# 	d
+		# 	2
+		# 	w
+		# EOF
+		echo -e "\n=== Delete partitions ===\n"
+		{
+			echo "d"
+			echo "1"
+			echo "d"
+			echo "2"
+			echo "w"
+		} | sudo fdisk $DEV
 		sync
 		echo "delete compele !!"
 	elif [ $res = "n" ]
@@ -42,48 +59,57 @@ EOF
 
 patitionSd()
 {
-	echo -n "DOM SD card setup \n"
+	echo "=== Create Partition sd card ===\n"
+	if [ "$1" = "" ]
+	then
+		
         echo -n "Name device sdcard [example: sda/sdb/sdc] > "
         read nameSdCard
+		DEV=/dev/$nameSdCard
+	else
+		DEV=/dev/$1
+	fi 
+	
 
         # make sure umount sd card
-        sudo umount /dev/sdb
-        res=$?
-        if [ $res -eq -1 ];
-        then
-                echo "success"
-        else
-                echo "fail"
-        fi
+		sd="${DEV}"
+        sudo umount $sd
+		sd1="${DEV}1"
+        sudo umount $sd1
+        sd2="${DEV}2"
+        sudo umount $sd2
 
 	
-# parition 
-# n : create new parition
-# p : per
-# t :
-# 1
-# c
-# w
-cat << EOF | sudo fdisk /dev/sdb
-	n
-	p
-	1
-	2048
-	104447
-	n
-	p
-	2
-	104448
-	2152448
-
-	t
-	1
-	c
-	w
-EOF
-	
-
-
+	# # parition 
+	# # n : create new parition
+	# # p : per
+	# # t :
+	# # 1
+	# # c
+	# # w
+		echo -e "=== Creating 2 partitions ===\n"
+		{
+			echo "n"  ## parititon 1 : 50MB
+			echo "p"
+			echo "1"
+			echo "2048"
+			echo "104447"
+			echo "n"		## parititon 1 : 1G
+			echo "p"
+			echo "2"
+			echo "104448"
+			echo "2152448"
+			echo "t"		
+			echo "1"
+			echo "c"
+			echo "w"		# sync
+		} | sudo fdisk $DEV 
+		sync
+	# Set partittiton
+	sd1="${DEV}1"
+	sudo mkfs.vfat -v -c -F 32 $sd1
+	sd2="${DEV}2"
+	sudo mkfs.ext4 $sd2
 }
 
 set_sdcard()
@@ -106,11 +132,11 @@ test()
 # MAIN
 case "$argu1" in
 	"-d") echo "Delete sd card"
-		deleteFunc
+		deleteFunc $2
 		exit 1
 		;;
 	"-p") echo "partition sd card"
-		patitionSd
+		patitionSd $2
 		exit 1
 		;;
 	"-h")
